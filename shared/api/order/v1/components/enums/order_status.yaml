@@ -1,0 +1,11 @@
+type: string
+enum:
+  - PENDING_PAYMENT
+  - PAID
+  - CANCELLED
+description: Статусы заказа
+example: PENDING_PAYMENT
+x-enum-descriptions:
+  PENDING_PAYMENT: Ожидает оплаты
+  PAID: Оплачен
+  CANCELLED: Отменён

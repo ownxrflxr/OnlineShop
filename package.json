@@ -1,0 +1,24 @@
+{
+  "name": "project_shop",
+  "version": "1.0.0",
+  "description": "Go микросервисы. Clean Architecture, REST, gRPC, PostgreSQL, Docker.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ownxrflxr/OnlineShop.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ownxrflxr/OnlineShop/issues"
+  },
+  "homepage": "https://github.com/ownxrflxr/OnlineShop#readme",
+  "dependencies": {
+    "@redocly/cli": "^2.31.4"
+  }
+}

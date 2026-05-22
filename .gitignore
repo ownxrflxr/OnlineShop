@@ -1,0 +1,14 @@
+# бинарники
+/bin/
+*.exe
+
+# переменные окружения
+.env
+*.env
+
+# go workspace sum
+go.work.sum
+
+# системное
+.DS_Store
+.idea/
