@@ -187,17 +187,14 @@ components:
             - 550e8400-e29b-41d4-a716-446655440001
             - 550e8400-e29b-41d4-a716-446655440002
     generic_error:
-      components:
-        schemas:
-          Error:
-            type: object
-            properties:
-              code:
-                type: integer
-                description: HTTP-код ошибки
-              message:
-                type: string
-                description: Описание ошибки
+      type: object
+      properties:
+        code:
+          type: integer
+          description: HTTP-код ошибки
+        message:
+          type: string
+          description: Описание ошибки
     create_order_response:
       type: object
       required:
@@ -215,39 +212,33 @@ components:
           example: 123.45
           minimum: 0
     bad_request_error:
-      components:
-        schemas:
-          Error:
-            type: object
-            required:
-              - code
-              - message
-            properties:
-              code:
-                type: integer
-                description: HTTP-код ошибки
-                example: 400
-              message:
-                type: string
-                description: Описание ошибки
-                example: 'Bad Request: Invalid parameter format'
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: HTTP-код ошибки
+          example: 400
+        message:
+          type: string
+          description: Описание ошибки
+          example: 'Bad Request: Invalid parameter format'
     internal_server_error:
-      components:
-        schemas:
-          Error:
-            type: object
-            required:
-              - code
-              - message
-            properties:
-              code:
-                type: integer
-                description: HTTP-код ошибки
-                example: 500
-              message:
-                type: string
-                description: Описание ошибки
-                example: Internal server error occurred
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: HTTP-код ошибки
+          example: 500
+        message:
+          type: string
+          description: Описание ошибки
+          example: Internal server error occurred
     payment_method:
       type: string
       enum:
@@ -279,22 +270,19 @@ components:
           description: uuid транзакции
           example: 123e4567-e89b-12d3-a456-426655440000
     not_found_error:
-      components:
-        schemas:
-          Error:
-            type: object
-            required:
-              - code
-              - message
-            properties:
-              code:
-                type: integer
-                description: HTTP-код ошибки
-                example: 404
-              message:
-                type: string
-                description: Описание ошибки
-                example: Order not found
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: HTTP-код ошибки
+          example: 404
+        message:
+          type: string
+          description: Описание ошибки
+          example: Order not found
     order_status:
       type: string
       enum:
@@ -352,22 +340,19 @@ components:
         status:
           $ref: '#/components/schemas/order_status'
     conflict_error:
-      components:
-        schemas:
-          Error:
-            type: object
-            required:
-              - code
-              - message
-            properties:
-              code:
-                type: integer
-                description: HTTP-код ошибки
-                example: 409
-              message:
-                type: string
-                description: Описание ошибки
-                example: Conflict error
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: HTTP-код ошибки
+          example: 409
+        message:
+          type: string
+          description: Описание ошибки
+          example: Conflict error
   parameters:
     order_uuid:
       name: order_uuid
