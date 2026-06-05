@@ -14,7 +14,7 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-func (s *Server) decodeCreateOrderByDetailsRequest(r *http.Request) (
+func (s *Server) decodeCreateOrderRequest(r *http.Request) (
 	req *CreateOrderRequest,
 	close func() error,
 	rerr error,

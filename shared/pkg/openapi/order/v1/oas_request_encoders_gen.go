@@ -11,7 +11,7 @@ import (
 	ht "github.com/ogen-go/ogen/http"
 )
 
-func encodeCreateOrderByDetailsRequest(
+func encodeCreateOrderRequest(
 	req *CreateOrderRequest,
 	r *http.Request,
 ) error {

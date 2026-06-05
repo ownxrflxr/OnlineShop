@@ -13,30 +13,30 @@ type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
 
-// CreateOrderByDetails implements CreateOrderByDetails operation.
-//
-// Создание заказа.
-//
-// POST /api/v1/orders
-func (UnimplementedHandler) CreateOrderByDetails(ctx context.Context, req *CreateOrderRequest) (r CreateOrderByDetailsRes, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
-// DeleteOrderByDetails implements deleteOrderByDetails operation.
+// CancelOrder implements CancelOrder operation.
 //
 // Создание заказа.
 //
 // POST /api/v1/orders/{order_uuid}/cancel
-func (UnimplementedHandler) DeleteOrderByDetails(ctx context.Context, params DeleteOrderByDetailsParams) (r DeleteOrderByDetailsRes, _ error) {
+func (UnimplementedHandler) CancelOrder(ctx context.Context, params CancelOrderParams) (r CancelOrderRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
-// GetOrderById implements GetOrderById operation.
+// CreateOrder implements CreateOrder operation.
+//
+// Создание заказа.
+//
+// POST /api/v1/orders
+func (UnimplementedHandler) CreateOrder(ctx context.Context, req *CreateOrderRequest) (r CreateOrderRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetOrderByUUID implements GetOrderByUUID operation.
 //
 // Get order data by id.
 //
 // GET /api/v1/orders/{order_uuid}
-func (UnimplementedHandler) GetOrderById(ctx context.Context, params GetOrderByIdParams) (r GetOrderByIdRes, _ error) {
+func (UnimplementedHandler) GetOrderByUUID(ctx context.Context, params GetOrderByUUIDParams) (r GetOrderByUUIDRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

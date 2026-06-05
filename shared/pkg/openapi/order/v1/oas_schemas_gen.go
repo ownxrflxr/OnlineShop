@@ -41,9 +41,14 @@ func (s *BadRequestError) SetMessage(val string) {
 	s.Message = val
 }
 
-func (*BadRequestError) createOrderByDetailsRes() {}
-func (*BadRequestError) getOrderByIdRes()         {}
-func (*BadRequestError) payOrderRes()             {}
+func (*BadRequestError) createOrderRes()    {}
+func (*BadRequestError) getOrderByUUIDRes() {}
+func (*BadRequestError) payOrderRes()       {}
+
+// CancelOrderNoContent is response for CancelOrder operation.
+type CancelOrderNoContent struct{}
+
+func (*CancelOrderNoContent) cancelOrderRes() {}
 
 // Ref: #/components/schemas/conflict_error
 type ConflictError struct {
@@ -73,7 +78,7 @@ func (s *ConflictError) SetMessage(val string) {
 	s.Message = val
 }
 
-func (*ConflictError) deleteOrderByDetailsRes() {}
+func (*ConflictError) cancelOrderRes() {}
 
 // Ref: #/components/schemas/create_order_request
 type CreateOrderRequest struct {
@@ -131,12 +136,7 @@ func (s *CreateOrderResponse) SetTotalPrice(val float64) {
 	s.TotalPrice = val
 }
 
-func (*CreateOrderResponse) createOrderByDetailsRes() {}
-
-// DeleteOrderByDetailsNoContent is response for DeleteOrderByDetails operation.
-type DeleteOrderByDetailsNoContent struct{}
-
-func (*DeleteOrderByDetailsNoContent) deleteOrderByDetailsRes() {}
+func (*CreateOrderResponse) createOrderRes() {}
 
 // Ref: #/components/schemas/generic_error
 type GenericError struct {
@@ -278,7 +278,7 @@ func (s *GetOrderByUUIDResponse) SetStatus(val OrderStatus) {
 	s.Status = val
 }
 
-func (*GetOrderByUUIDResponse) getOrderByIdRes() {}
+func (*GetOrderByUUIDResponse) getOrderByUUIDRes() {}
 
 // Ref: #/components/schemas/internal_server_error
 type InternalServerError struct {
@@ -308,10 +308,10 @@ func (s *InternalServerError) SetMessage(val string) {
 	s.Message = val
 }
 
-func (*InternalServerError) createOrderByDetailsRes() {}
-func (*InternalServerError) deleteOrderByDetailsRes() {}
-func (*InternalServerError) getOrderByIdRes()         {}
-func (*InternalServerError) payOrderRes()             {}
+func (*InternalServerError) cancelOrderRes()    {}
+func (*InternalServerError) createOrderRes()    {}
+func (*InternalServerError) getOrderByUUIDRes() {}
+func (*InternalServerError) payOrderRes()       {}
 
 // Ref: #/components/schemas/not_found_error
 type NotFoundError struct {
@@ -341,9 +341,9 @@ func (s *NotFoundError) SetMessage(val string) {
 	s.Message = val
 }
 
-func (*NotFoundError) deleteOrderByDetailsRes() {}
-func (*NotFoundError) getOrderByIdRes()         {}
-func (*NotFoundError) payOrderRes()             {}
+func (*NotFoundError) cancelOrderRes()    {}
+func (*NotFoundError) getOrderByUUIDRes() {}
+func (*NotFoundError) payOrderRes()       {}
 
 // NewOptInt returns new OptInt with value set to v.
 func NewOptInt(v int) OptInt {

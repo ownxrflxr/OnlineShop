@@ -2,7 +2,7 @@ post:
   tags:
     - order
   summary: создание заказа
-  operationId: CreateOrderByDetails
+  operationId: CreateOrder
   requestBody:
     required: true
     content:

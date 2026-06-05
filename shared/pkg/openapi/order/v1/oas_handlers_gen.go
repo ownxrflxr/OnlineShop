@@ -30,22 +30,22 @@ func (c *codeRecorder) WriteHeader(status int) {
 	c.ResponseWriter.WriteHeader(status)
 }
 
-// handleCreateOrderByDetailsRequest handles CreateOrderByDetails operation.
+// handleCancelOrderRequest handles CancelOrder operation.
 //
 // Создание заказа.
 //
-// POST /api/v1/orders
-func (s *Server) handleCreateOrderByDetailsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// POST /api/v1/orders/{order_uuid}/cancel
+func (s *Server) handleCancelOrderRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("CreateOrderByDetails"),
+		otelogen.OperationID("CancelOrder"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/api/v1/orders"),
+		semconv.HTTPRouteKey.String("/api/v1/orders/{order_uuid}/cancel"),
 	}
 
 	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), CreateOrderByDetailsOperation,
+	ctx, span := s.cfg.Tracer.Start(r.Context(), CancelOrderOperation,
 		trace.WithAttributes(otelAttrs...),
 		serverSpanKind,
 	)
@@ -100,11 +100,160 @@ func (s *Server) handleCreateOrderByDetailsRequest(args [0]string, argsEscaped b
 		}
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: CreateOrderByDetailsOperation,
-			ID:   "CreateOrderByDetails",
+			Name: CancelOrderOperation,
+			ID:   "CancelOrder",
 		}
 	)
-	request, close, err := s.decodeCreateOrderByDetailsRequest(r)
+	params, err := decodeCancelOrderParams(args, argsEscaped, r)
+	if err != nil {
+		err = &ogenerrors.DecodeParamsError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeParams", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	var response CancelOrderRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    CancelOrderOperation,
+			OperationSummary: "создание заказа",
+			OperationID:      "CancelOrder",
+			Body:             nil,
+			Params: middleware.Parameters{
+				{
+					Name: "order_uuid",
+					In:   "path",
+				}: params.OrderUUID,
+			},
+			Raw: r,
+		}
+
+		type (
+			Request  = struct{}
+			Params   = CancelOrderParams
+			Response = CancelOrderRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			unpackCancelOrderParams,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.CancelOrder(ctx, params)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.CancelOrder(ctx, params)
+	}
+	if err != nil {
+		if errRes, ok := errors.Into[*GenericErrorStatusCode](err); ok {
+			if err := encodeErrorResponse(errRes, w, span); err != nil {
+				defer recordError("Internal", err)
+			}
+			return
+		}
+		if errors.Is(err, ht.ErrNotImplemented) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+		if err := encodeErrorResponse(s.h.NewError(ctx, err), w, span); err != nil {
+			defer recordError("Internal", err)
+		}
+		return
+	}
+
+	if err := encodeCancelOrderResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleCreateOrderRequest handles CreateOrder operation.
+//
+// Создание заказа.
+//
+// POST /api/v1/orders
+func (s *Server) handleCreateOrderRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("CreateOrder"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/api/v1/orders"),
+	}
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), CreateOrderOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code >= 100 && code < 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: CreateOrderOperation,
+			ID:   "CreateOrder",
+		}
+	)
+	request, close, err := s.decodeCreateOrderRequest(r)
 	if err != nil {
 		err = &ogenerrors.DecodeRequestError{
 			OperationContext: opErrContext,
@@ -120,13 +269,13 @@ func (s *Server) handleCreateOrderByDetailsRequest(args [0]string, argsEscaped b
 		}
 	}()
 
-	var response CreateOrderByDetailsRes
+	var response CreateOrderRes
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    CreateOrderByDetailsOperation,
+			OperationName:    CreateOrderOperation,
 			OperationSummary: "создание заказа",
-			OperationID:      "CreateOrderByDetails",
+			OperationID:      "CreateOrder",
 			Body:             request,
 			Params:           middleware.Parameters{},
 			Raw:              r,
@@ -135,7 +284,7 @@ func (s *Server) handleCreateOrderByDetailsRequest(args [0]string, argsEscaped b
 		type (
 			Request  = *CreateOrderRequest
 			Params   = struct{}
-			Response = CreateOrderByDetailsRes
+			Response = CreateOrderRes
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -146,12 +295,12 @@ func (s *Server) handleCreateOrderByDetailsRequest(args [0]string, argsEscaped b
 			mreq,
 			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateOrderByDetails(ctx, request)
+				response, err = s.h.CreateOrder(ctx, request)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.CreateOrderByDetails(ctx, request)
+		response, err = s.h.CreateOrder(ctx, request)
 	}
 	if err != nil {
 		if errRes, ok := errors.Into[*GenericErrorStatusCode](err); ok {
@@ -170,7 +319,7 @@ func (s *Server) handleCreateOrderByDetailsRequest(args [0]string, argsEscaped b
 		return
 	}
 
-	if err := encodeCreateOrderByDetailsResponse(response, w, span); err != nil {
+	if err := encodeCreateOrderResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -179,171 +328,22 @@ func (s *Server) handleCreateOrderByDetailsRequest(args [0]string, argsEscaped b
 	}
 }
 
-// handleDeleteOrderByDetailsRequest handles deleteOrderByDetails operation.
-//
-// Создание заказа.
-//
-// POST /api/v1/orders/{order_uuid}/cancel
-func (s *Server) handleDeleteOrderByDetailsRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
-	w = statusWriter
-	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("deleteOrderByDetails"),
-		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/api/v1/orders/{order_uuid}/cancel"),
-	}
-
-	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), DeleteOrderByDetailsOperation,
-		trace.WithAttributes(otelAttrs...),
-		serverSpanKind,
-	)
-	defer span.End()
-
-	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
-	ctx = contextWithLabeler(ctx, labeler)
-
-	// Run stopwatch.
-	startTime := time.Now()
-	defer func() {
-		elapsedDuration := time.Since(startTime)
-
-		attrSet := labeler.AttributeSet()
-		attrs := attrSet.ToSlice()
-		code := statusWriter.status
-		if code != 0 {
-			codeAttr := semconv.HTTPResponseStatusCode(code)
-			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
-		}
-		attrOpt := metric.WithAttributes(attrs...)
-
-		// Increment request counter.
-		s.requests.Add(ctx, 1, attrOpt)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
-	}()
-
-	var (
-		recordError = func(stage string, err error) {
-			span.RecordError(err)
-
-			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
-			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
-			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
-			// max redirects exceeded), in which case status MUST be set to Error.
-			code := statusWriter.status
-			if code >= 100 && code < 500 {
-				span.SetStatus(codes.Error, stage)
-			}
-
-			attrSet := labeler.AttributeSet()
-			attrs := attrSet.ToSlice()
-			if code != 0 {
-				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
-			}
-
-			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
-		}
-		err          error
-		opErrContext = ogenerrors.OperationContext{
-			Name: DeleteOrderByDetailsOperation,
-			ID:   "deleteOrderByDetails",
-		}
-	)
-	params, err := decodeDeleteOrderByDetailsParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	var response DeleteOrderByDetailsRes
-	if m := s.cfg.Middleware; m != nil {
-		mreq := middleware.Request{
-			Context:          ctx,
-			OperationName:    DeleteOrderByDetailsOperation,
-			OperationSummary: "создание заказа",
-			OperationID:      "deleteOrderByDetails",
-			Body:             nil,
-			Params: middleware.Parameters{
-				{
-					Name: "order_uuid",
-					In:   "path",
-				}: params.OrderUUID,
-			},
-			Raw: r,
-		}
-
-		type (
-			Request  = struct{}
-			Params   = DeleteOrderByDetailsParams
-			Response = DeleteOrderByDetailsRes
-		)
-		response, err = middleware.HookMiddleware[
-			Request,
-			Params,
-			Response,
-		](
-			m,
-			mreq,
-			unpackDeleteOrderByDetailsParams,
-			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.DeleteOrderByDetails(ctx, params)
-				return response, err
-			},
-		)
-	} else {
-		response, err = s.h.DeleteOrderByDetails(ctx, params)
-	}
-	if err != nil {
-		if errRes, ok := errors.Into[*GenericErrorStatusCode](err); ok {
-			if err := encodeErrorResponse(errRes, w, span); err != nil {
-				defer recordError("Internal", err)
-			}
-			return
-		}
-		if errors.Is(err, ht.ErrNotImplemented) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-			return
-		}
-		if err := encodeErrorResponse(s.h.NewError(ctx, err), w, span); err != nil {
-			defer recordError("Internal", err)
-		}
-		return
-	}
-
-	if err := encodeDeleteOrderByDetailsResponse(response, w, span); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
-		return
-	}
-}
-
-// handleGetOrderByIdRequest handles GetOrderById operation.
+// handleGetOrderByUUIDRequest handles GetOrderByUUID operation.
 //
 // Get order data by id.
 //
 // GET /api/v1/orders/{order_uuid}
-func (s *Server) handleGetOrderByIdRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleGetOrderByUUIDRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("GetOrderById"),
+		otelogen.OperationID("GetOrderByUUID"),
 		semconv.HTTPRequestMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/api/v1/orders/{order_uuid}"),
 	}
 
 	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), GetOrderByIdOperation,
+	ctx, span := s.cfg.Tracer.Start(r.Context(), GetOrderByUUIDOperation,
 		trace.WithAttributes(otelAttrs...),
 		serverSpanKind,
 	)
@@ -398,11 +398,11 @@ func (s *Server) handleGetOrderByIdRequest(args [1]string, argsEscaped bool, w h
 		}
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: GetOrderByIdOperation,
-			ID:   "GetOrderById",
+			Name: GetOrderByUUIDOperation,
+			ID:   "GetOrderByUUID",
 		}
 	)
-	params, err := decodeGetOrderByIdParams(args, argsEscaped, r)
+	params, err := decodeGetOrderByUUIDParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -413,13 +413,13 @@ func (s *Server) handleGetOrderByIdRequest(args [1]string, argsEscaped bool, w h
 		return
 	}
 
-	var response GetOrderByIdRes
+	var response GetOrderByUUIDRes
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    GetOrderByIdOperation,
+			OperationName:    GetOrderByUUIDOperation,
 			OperationSummary: "Get order data by id",
-			OperationID:      "GetOrderById",
+			OperationID:      "GetOrderByUUID",
 			Body:             nil,
 			Params: middleware.Parameters{
 				{
@@ -432,8 +432,8 @@ func (s *Server) handleGetOrderByIdRequest(args [1]string, argsEscaped bool, w h
 
 		type (
 			Request  = struct{}
-			Params   = GetOrderByIdParams
-			Response = GetOrderByIdRes
+			Params   = GetOrderByUUIDParams
+			Response = GetOrderByUUIDRes
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -442,14 +442,14 @@ func (s *Server) handleGetOrderByIdRequest(args [1]string, argsEscaped bool, w h
 		](
 			m,
 			mreq,
-			unpackGetOrderByIdParams,
+			unpackGetOrderByUUIDParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetOrderById(ctx, params)
+				response, err = s.h.GetOrderByUUID(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.GetOrderById(ctx, params)
+		response, err = s.h.GetOrderByUUID(ctx, params)
 	}
 	if err != nil {
 		if errRes, ok := errors.Into[*GenericErrorStatusCode](err); ok {
@@ -468,7 +468,7 @@ func (s *Server) handleGetOrderByIdRequest(args [1]string, argsEscaped bool, w h
 		return
 	}
 
-	if err := encodeGetOrderByIdResponse(response, w, span); err != nil {
+	if err := encodeGetOrderByUUIDResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

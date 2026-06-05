@@ -16,14 +16,14 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// DeleteOrderByDetailsParams is parameters of deleteOrderByDetails operation.
-type DeleteOrderByDetailsParams struct {
+// CancelOrderParams is parameters of CancelOrder operation.
+type CancelOrderParams struct {
 	// Название заказа для которого заправшивается или
 	// обновляются данные.
 	OrderUUID uuid.UUID
 }
 
-func unpackDeleteOrderByDetailsParams(packed middleware.Parameters) (params DeleteOrderByDetailsParams) {
+func unpackCancelOrderParams(packed middleware.Parameters) (params CancelOrderParams) {
 	{
 		key := middleware.ParameterKey{
 			Name: "order_uuid",
@@ -34,7 +34,7 @@ func unpackDeleteOrderByDetailsParams(packed middleware.Parameters) (params Dele
 	return params
 }
 
-func decodeDeleteOrderByDetailsParams(args [1]string, argsEscaped bool, r *http.Request) (params DeleteOrderByDetailsParams, _ error) {
+func decodeCancelOrderParams(args [1]string, argsEscaped bool, r *http.Request) (params CancelOrderParams, _ error) {
 	// Decode path: order_uuid.
 	if err := func() error {
 		param := args[0]
@@ -83,14 +83,14 @@ func decodeDeleteOrderByDetailsParams(args [1]string, argsEscaped bool, r *http.
 	return params, nil
 }
 
-// GetOrderByIdParams is parameters of GetOrderById operation.
-type GetOrderByIdParams struct {
+// GetOrderByUUIDParams is parameters of GetOrderByUUID operation.
+type GetOrderByUUIDParams struct {
 	// Название заказа для которого заправшивается или
 	// обновляются данные.
 	OrderUUID uuid.UUID
 }
 
-func unpackGetOrderByIdParams(packed middleware.Parameters) (params GetOrderByIdParams) {
+func unpackGetOrderByUUIDParams(packed middleware.Parameters) (params GetOrderByUUIDParams) {
 	{
 		key := middleware.ParameterKey{
 			Name: "order_uuid",
@@ -101,7 +101,7 @@ func unpackGetOrderByIdParams(packed middleware.Parameters) (params GetOrderById
 	return params
 }
 
-func decodeGetOrderByIdParams(args [1]string, argsEscaped bool, r *http.Request) (params GetOrderByIdParams, _ error) {
+func decodeGetOrderByUUIDParams(args [1]string, argsEscaped bool, r *http.Request) (params GetOrderByUUIDParams, _ error) {
 	// Decode path: order_uuid.
 	if err := func() error {
 		param := args[0]

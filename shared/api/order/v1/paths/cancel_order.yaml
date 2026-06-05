@@ -5,7 +5,7 @@ post:
   tags:
     - order
   summary: создание заказа
-  operationId: deleteOrderByDetails
+  operationId: CancelOrder
   responses:
     '204':
       description: No content

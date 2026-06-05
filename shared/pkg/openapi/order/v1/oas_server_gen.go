@@ -8,24 +8,24 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
-	// CreateOrderByDetails implements CreateOrderByDetails operation.
-	//
-	// Создание заказа.
-	//
-	// POST /api/v1/orders
-	CreateOrderByDetails(ctx context.Context, req *CreateOrderRequest) (CreateOrderByDetailsRes, error)
-	// DeleteOrderByDetails implements deleteOrderByDetails operation.
+	// CancelOrder implements CancelOrder operation.
 	//
 	// Создание заказа.
 	//
 	// POST /api/v1/orders/{order_uuid}/cancel
-	DeleteOrderByDetails(ctx context.Context, params DeleteOrderByDetailsParams) (DeleteOrderByDetailsRes, error)
-	// GetOrderById implements GetOrderById operation.
+	CancelOrder(ctx context.Context, params CancelOrderParams) (CancelOrderRes, error)
+	// CreateOrder implements CreateOrder operation.
+	//
+	// Создание заказа.
+	//
+	// POST /api/v1/orders
+	CreateOrder(ctx context.Context, req *CreateOrderRequest) (CreateOrderRes, error)
+	// GetOrderByUUID implements GetOrderByUUID operation.
 	//
 	// Get order data by id.
 	//
 	// GET /api/v1/orders/{order_uuid}
-	GetOrderById(ctx context.Context, params GetOrderByIdParams) (GetOrderByIdRes, error)
+	GetOrderByUUID(ctx context.Context, params GetOrderByUUIDParams) (GetOrderByUUIDRes, error)
 	// PayOrder implements PayOrder operation.
 	//
 	// Оплата заказа.

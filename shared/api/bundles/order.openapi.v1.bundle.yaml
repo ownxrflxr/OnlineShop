@@ -12,7 +12,7 @@ paths:
       tags:
         - order
       summary: создание заказа
-      operationId: CreateOrderByDetails
+      operationId: CreateOrder
       requestBody:
         required: true
         content:
@@ -94,7 +94,7 @@ paths:
       - $ref: '#/components/parameters/order_uuid'
     get:
       summary: Get order data by id
-      operationId: GetOrderById
+      operationId: GetOrderByUUID
       tags:
         - order
       responses:
@@ -135,7 +135,7 @@ paths:
       tags:
         - order
       summary: создание заказа
-      operationId: deleteOrderByDetails
+      operationId: CancelOrder
       responses:
         '204':
           description: No content
